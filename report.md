@@ -5,265 +5,59 @@ Brian Yi, Alexa Edwards, Erica Chen, Minerva Fang
 Introduction
 ============
 
-This project focuses on building a model for the Ames Housing dataset to predict housing prices. We first select a model through backward elimination, forward selection, and stepwise regression. Then we conduct residual analysis for this model to identify outliers. We then take our model out for a run to predict a housing price to see if the results are reasonable.
+**Purpose:** The purpose of this project is to develop and validate a model that can assist with prospective house owners in estimating house prices depending on the qualities they are looking for in their future home.
 
-Next, we transform our model such that predictors will have a stronger correlation with our dependent variable, price. We finally conduct some cross-validation on our non-transformed model to see if our model does well in predicting on a test dataset.
+**Method of Approach:** This group project focuses on building and testing a multivariate linear regression model from the Ames Housing dataset. Our dataset is split between a training set that is used to "train" our model, and a testing set that we "test" our model on. First, we use best subsets regression, backward elimination, forward selection, and step-wise regression to build our initial model. We conduct some individual t-tests for slope to measure the significance of the predictors in our model. We also exmaine the variance inflation factor (VIF) to detect any multicollinearity between our predictors. Next, we do some residual analysis through residual vs fits plots, histogram distributions, and normal quantile plots. We also compute standarized residuals to pinpoint potential outliers.
 
-Part 1. Build an initial basic model
-====================================
+Our initial model has some insignificant variables so we transform these predictors so that they have a stronger correlation with our response variable, `Price`. With this transformed model, we conduct the same hypothesis tests and residual analysis that we did for our initial model. Finally, we cross-validate our transformed model with the testing set to evaluate its effectiveness in predicting house prices. To finish our report, we take our final model out for a spin by predicting a particular housing price to see if the results are reasonable.
 
-### Mallow's Cp and adjusted R-squared
+**Results:** Our final transformed model fits our data well and fulfills all the metrics that we evaluated it with. There are a couple of things about how our methodology can be potentially lacking that will be addressed thoroughly in the conclusion.
 
-We decide to use four methods to determine which model is best suited for predicting the price of a house in Ames, Iowa. Our first method investigates the adjusted R-squared values and Mallow's Cp for the best subsets.
+Build an Initial Model
+======================
+
+Best Subsets Regression
+-----------------------
+
+We will first use best subsets regression to find our initial model. This method investigates the adjusted R-squared and Mallows' Cp values of different models created with various subsets of predictors.
 
 ``` r
-# Model with all the variables before selection
+# Model with all the possible predictors
 Full = lm(formula = Price ~ LotFrontage + LotArea + Quality + Condition + YearBuilt + YearRemodel + BasementSF + GroundSF + BasementFBath + BasementHBath + FullBath + HalfBath + Bedroom + TotalRooms + Fireplaces + GarageCars + GarageSF + WoodDeckSF + OpenPorchSF + EnclosedPorchSF + ScreenPorchSF, data = Ames)
 
-# Mallow's Cp and Adjusted R-squared selection
+# Finding all possible subsets/models
 all = regsubsets(Price ~ LotFrontage + LotArea + Quality + Condition + YearBuilt + YearRemodel + BasementSF + GroundSF + BasementFBath + BasementHBath + FullBath + HalfBath + Bedroom + TotalRooms + Fireplaces + GarageCars + GarageSF + WoodDeckSF + OpenPorchSF + EnclosedPorchSF + ScreenPorchSF, data = Ames, nbest = 2, nvmax = 30)
 
-# Visualization of our method
-ShowSubsets=function(regout){
-  z=summary(regout)
-  q=as.data.frame(z$outmat)
-  q$Rsq=round(z$rsq*100,2)
-  q$adjRsq=round(z$adjr2*100,2)
-  q$Cp=round(z$cp,2)
+# Method for visualizing our results
+ShowSubsets = function(regout){
+  z = summary(regout)
+  q = as.data.frame(z$outmat)
+  q$Rsq = round(z$rsq * 100, 2)
+  q$adjRsq = round(z$adjr2 * 100, 2)
+  q$Cp = round(z$cp, 2)
   return(q)
 }
 
 ShowSubsets(all)
 ```
 
-    ##           LotFrontage LotArea Quality Condition YearBuilt YearRemodel
-    ## 1  ( 1 )                            *                                
-    ## 1  ( 2 )                                                             
-    ## 2  ( 1 )                            *                                
-    ## 2  ( 2 )                            *                                
-    ## 3  ( 1 )                            *                                
-    ## 3  ( 2 )                            *                                
-    ## 4  ( 1 )                            *                                
-    ## 4  ( 2 )                            *                   *            
-    ## 5  ( 1 )                            *                   *            
-    ## 5  ( 2 )                    *       *                                
-    ## 6  ( 1 )                    *       *                   *            
-    ## 6  ( 2 )                    *       *                                
-    ## 7  ( 1 )                    *       *                   *            
-    ## 7  ( 2 )                    *       *                   *            
-    ## 8  ( 1 )                    *       *                   *            
-    ## 8  ( 2 )                    *       *                   *            
-    ## 9  ( 1 )                    *       *                   *           *
-    ## 9  ( 2 )                    *       *         *         *            
-    ## 10  ( 1 )           *       *       *                   *           *
-    ## 10  ( 2 )           *       *       *         *         *            
-    ## 11  ( 1 )           *       *       *         *         *            
-    ## 11  ( 2 )           *       *       *                   *           *
-    ## 12  ( 1 )           *       *       *         *         *            
-    ## 12  ( 2 )           *       *       *         *         *            
-    ## 13  ( 1 )           *       *       *         *         *            
-    ## 13  ( 2 )           *       *       *         *         *           *
-    ## 14  ( 1 )           *       *       *         *         *           *
-    ## 14  ( 2 )           *       *       *         *         *           *
-    ## 15  ( 1 )           *       *       *         *         *           *
-    ## 15  ( 2 )           *       *       *         *         *           *
-    ## 16  ( 1 )           *       *       *         *         *           *
-    ## 16  ( 2 )           *       *       *         *         *           *
-    ## 17  ( 1 )           *       *       *         *         *           *
-    ## 17  ( 2 )           *       *       *         *         *           *
-    ## 18  ( 1 )           *       *       *         *         *           *
-    ## 18  ( 2 )           *       *       *         *         *           *
-    ## 19  ( 1 )           *       *       *         *         *           *
-    ## 19  ( 2 )           *       *       *         *         *           *
-    ## 20  ( 1 )           *       *       *         *         *           *
-    ## 20  ( 2 )           *       *       *         *         *           *
-    ## 21  ( 1 )           *       *       *         *         *           *
-    ##           BasementSF GroundSF BasementFBath BasementHBath FullBath
-    ## 1  ( 1 )                                                          
-    ## 1  ( 2 )                    *                                     
-    ## 2  ( 1 )                    *                                     
-    ## 2  ( 2 )           *                                              
-    ## 3  ( 1 )           *        *                                     
-    ## 3  ( 2 )                    *             *                       
-    ## 4  ( 1 )           *        *             *                       
-    ## 4  ( 2 )           *        *                                     
-    ## 5  ( 1 )           *        *             *                       
-    ## 5  ( 2 )           *        *             *                       
-    ## 6  ( 1 )           *        *             *                       
-    ## 6  ( 2 )           *        *             *                       
-    ## 7  ( 1 )           *        *             *                       
-    ## 7  ( 2 )           *        *             *                       
-    ## 8  ( 1 )           *        *             *                       
-    ## 8  ( 2 )           *        *             *                       
-    ## 9  ( 1 )           *        *             *                       
-    ## 9  ( 2 )           *        *             *                       
-    ## 10  ( 1 )          *        *             *                       
-    ## 10  ( 2 )          *        *             *                       
-    ## 11  ( 1 )          *        *             *                       
-    ## 11  ( 2 )          *        *             *                       
-    ## 12  ( 1 )          *        *             *                       
-    ## 12  ( 2 )          *        *             *                       
-    ## 13  ( 1 )          *        *             *                       
-    ## 13  ( 2 )          *        *             *                       
-    ## 14  ( 1 )          *        *             *                       
-    ## 14  ( 2 )          *        *             *                      *
-    ## 15  ( 1 )          *        *             *                      *
-    ## 15  ( 2 )          *        *             *                       
-    ## 16  ( 1 )          *        *             *             *        *
-    ## 16  ( 2 )          *        *             *                      *
-    ## 17  ( 1 )          *        *             *                      *
-    ## 17  ( 2 )          *        *             *             *        *
-    ## 18  ( 1 )          *        *             *             *        *
-    ## 18  ( 2 )          *        *             *             *        *
-    ## 19  ( 1 )          *        *             *             *        *
-    ## 19  ( 2 )          *        *             *             *        *
-    ## 20  ( 1 )          *        *             *             *        *
-    ## 20  ( 2 )          *        *             *             *        *
-    ## 21  ( 1 )          *        *             *             *        *
-    ##           HalfBath Bedroom TotalRooms Fireplaces GarageCars GarageSF
-    ## 1  ( 1 )                                                            
-    ## 1  ( 2 )                                                            
-    ## 2  ( 1 )                                                            
-    ## 2  ( 2 )                                                            
-    ## 3  ( 1 )                                                            
-    ## 3  ( 2 )                                                            
-    ## 4  ( 1 )                                                            
-    ## 4  ( 2 )                                                            
-    ## 5  ( 1 )                                                            
-    ## 5  ( 2 )                                                            
-    ## 6  ( 1 )                                                            
-    ## 6  ( 2 )                                                           *
-    ## 7  ( 1 )                                                           *
-    ## 7  ( 2 )                 *                                          
-    ## 8  ( 1 )                                       *                   *
-    ## 8  ( 2 )                 *                                         *
-    ## 9  ( 1 )                                       *                   *
-    ## 9  ( 2 )                                       *                   *
-    ## 10  ( 1 )                                      *                   *
-    ## 10  ( 2 )                                      *                   *
-    ## 11  ( 1 )                *                     *                   *
-    ## 11  ( 2 )                *                     *                   *
-    ## 12  ( 1 )                *                     *                   *
-    ## 12  ( 2 )                *          *          *                   *
-    ## 13  ( 1 )                *          *          *                   *
-    ## 13  ( 2 )                *                     *                   *
-    ## 14  ( 1 )                *          *          *                   *
-    ## 14  ( 2 )                *          *          *                   *
-    ## 15  ( 1 )                *          *          *                   *
-    ## 15  ( 2 )        *       *          *          *                   *
-    ## 16  ( 1 )                *          *          *                   *
-    ## 16  ( 2 )                *          *          *                   *
-    ## 17  ( 1 )                *          *          *                   *
-    ## 17  ( 2 )                *          *          *                   *
-    ## 18  ( 1 )                *          *          *                   *
-    ## 18  ( 2 )        *       *          *          *                   *
-    ## 19  ( 1 )        *       *          *          *                   *
-    ## 19  ( 2 )                *          *          *                   *
-    ## 20  ( 1 )        *       *          *          *                   *
-    ## 20  ( 2 )        *       *          *          *          *        *
-    ## 21  ( 1 )        *       *          *          *          *        *
-    ##           WoodDeckSF OpenPorchSF EnclosedPorchSF ScreenPorchSF   Rsq
-    ## 1  ( 1 )                                                       65.83
-    ## 1  ( 2 )                                                       48.42
-    ## 2  ( 1 )                                                       74.27
-    ## 2  ( 2 )                                                       71.81
-    ## 3  ( 1 )                                                       79.86
-    ## 3  ( 2 )                                                       77.67
-    ## 4  ( 1 )                                                       81.29
-    ## 4  ( 2 )                                                       81.28
-    ## 5  ( 1 )                                                       82.41
-    ## 5  ( 2 )                                                       82.39
-    ## 6  ( 1 )                                                       83.51
-    ## 6  ( 2 )                                                       83.31
-    ## 7  ( 1 )                                                       84.06
-    ## 7  ( 2 )                                                       83.93
-    ## 8  ( 1 )                                                       84.44
-    ## 8  ( 2 )                                                       84.38
-    ## 9  ( 1 )                                                       84.71
-    ## 9  ( 2 )                                                       84.69
-    ## 10  ( 1 )                                                      84.93
-    ## 10  ( 2 )                                                      84.93
-    ## 11  ( 1 )                                                      85.19
-    ## 11  ( 2 )                                                      85.11
-    ## 12  ( 1 )                                                    * 85.30
-    ## 12  ( 2 )                                                      85.29
-    ## 13  ( 1 )                                                    * 85.41
-    ## 13  ( 2 )                                                    * 85.40
-    ## 14  ( 1 )                                                    * 85.49
-    ## 14  ( 2 )                                                      85.46
-    ## 15  ( 1 )                                                    * 85.56
-    ## 15  ( 2 )                                                    * 85.52
-    ## 16  ( 1 )                                                    * 85.59
-    ## 16  ( 2 )          *                                         * 85.59
-    ## 17  ( 1 )          *                           *             * 85.61
-    ## 17  ( 2 )                                      *             * 85.61
-    ## 18  ( 1 )          *                           *             * 85.64
-    ## 18  ( 2 )                                      *             * 85.62
-    ## 19  ( 1 )          *                           *             * 85.64
-    ## 19  ( 2 )          *           *               *             * 85.64
-    ## 20  ( 1 )          *           *               *             * 85.65
-    ## 20  ( 2 )          *                           *             * 85.64
-    ## 21  ( 1 )          *           *               *             * 85.65
-    ##           adjRsq      Cp
-    ## 1  ( 1 )   65.77  780.09
-    ## 1  ( 2 )   48.34 1480.98
-    ## 2  ( 1 )   74.18  442.23
-    ## 2  ( 2 )   71.71  541.23
-    ## 3  ( 1 )   79.76  219.13
-    ## 3  ( 2 )   77.56  307.32
-    ## 4  ( 1 )   81.16  163.51
-    ## 4  ( 2 )   81.16  163.81
-    ## 5  ( 1 )   82.26  120.36
-    ## 5  ( 2 )   82.25  121.01
-    ## 6  ( 1 )   83.34   77.99
-    ## 6  ( 2 )   83.14   85.98
-    ## 7  ( 1 )   83.88   57.73
-    ## 7  ( 2 )   83.74   63.26
-    ## 8  ( 1 )   84.23   44.72
-    ## 8  ( 2 )   84.17   46.82
-    ## 9  ( 1 )   84.48   35.54
-    ## 9  ( 2 )   84.45   36.58
-    ## 10  ( 1 )  84.67   28.83
-    ## 10  ( 2 )  84.67   28.85
-    ## 11  ( 1 )  84.92   20.29
-    ## 11  ( 2 )  84.83   23.60
-    ## 12  ( 1 )  85.00   17.88
-    ## 12  ( 2 )  84.99   18.28
-    ## 13  ( 1 )  85.08   15.68
-    ## 13  ( 2 )  85.07   16.12
-    ## 14  ( 1 )  85.14   14.29
-    ## 14  ( 2 )  85.11   15.50
-    ## 15  ( 1 )  85.19   13.31
-    ## 15  ( 2 )  85.15   15.05
-    ## 16  ( 1 )  85.19   14.36
-    ## 16  ( 2 )  85.19   14.39
-    ## 17  ( 1 )  85.19   15.38
-    ## 17  ( 2 )  85.19   15.38
-    ## 18  ( 1 )  85.19   16.46
-    ## 18  ( 2 )  85.18   17.02
-    ## 19  ( 1 )  85.17   18.08
-    ## 19  ( 2 )  85.17   18.34
-    ## 20  ( 1 )  85.15   20.00
-    ## 20  ( 2 )  85.15   20.08
-    ## 21  ( 1 )  85.13   22.00
-
-The highest R-squared value is generally desired and we see that several models have the highest R-squared value of 85.19. However, the R-squared values depend only on the predictors in the model so looking at Mallow's Cp will shed light on the impact of predictors not in the model. As a general rule, a smaller Mallow's Cp is preferred. Model 15(1) has the lowest Cp of 13.31, while still having the higest R-squared value of 85.19, indicating that it is the best subset by this method.
+The higher the R-squared value of a linear model, the better that model fits the data. Since we are conducting a multivariate analysis, we will look at adjusted R-squared that also accounts for adding predictors that don't improve our model. There are a few models, 15(1), 16(1), 16(2), 17(1), 17(2), 18(1), with the highest adjusted R-squared value of 85.19 so we look at another metric, Mallow's Cp, to help shed some light on the predictors not in the model. As a general rule, a smaller Mallow's Cp indicates a better model. Model 15(1) has the smallest Cp of 13.31 while still having the higest adjusted R-squared value of 85.19, indicating that it is the best model by this method. However, this does not rule out the other models listed because their Mallows' Cp values are all less than k + 1 (k being the number of predictors); in other words, the other models I mentioned above also have very little to no bias in predicted responses.
 
 Our best model based off of R-squared and Mallow's Cp is the following:
 
 ``` r
-# Best model from our first method
+# Best model from best subsets regression
 modAmes = lm(formula = Price ~ LotFrontage + LotArea + Quality + Condition + YearBuilt + 
     YearRemodel + BasementSF + GroundSF + BasementFBath + FullBath + 
     Bedroom + TotalRooms + Fireplaces + GarageSF + ScreenPorchSF, data = Ames)
 ```
 
-We now run backward elimination, forward selection, and stepwise regression to see what other models are good.
+We now run backward elimination, forward selection, and step-wise regression to determine whether the initial model we selected is the best fit for our data.
 
 Backward Elimination
 --------------------
 
-The next method we used is backward elimination because it requires fitting fewer models but still leaves us with only significant predictors. Backward elimination takes out any predictor that has a P-value above 5% step by step until we reach our desired model.
+We conduct backward elimination first because it requires fitting fewer models but still leaves us with only significant predictors. Backward elimination starts with the full model (with all the predictors) and then takes out any predictor with a p-value above our 5% criterion individually until we reach our desired model.
 
 ``` r
 # Backward elimination
@@ -477,26 +271,40 @@ step(Full, scale = MSE)
     ## ScreenPorchSF  
     ##     5.016e-02
 
-Turns out, backward elimination also yields the model with the same fifteen variables when compared with the model found from the first method.
+Turns out, backward elimination also yields the model with the same fifteen predictors as the one discovered from best subsets regression!
 
 Forward Selection
 -----------------
 
-Backward elimination has numerous drawbacks such as eliminating a variable early on that might have significance later on. Therefore the last method we decided to use is forward selection, which works from the other direction. We start with the single best predictor and then add onto it until there are no more significant predictors to add to our model.
+Backward elimination has numerous drawbacks such as eliminating a variable early on that might have significance later on. Therefore, we decide to use forward selection that starts with the single best predictor and then adds onto it until there are no more significant predictors to add to our model. *We don't show the output of forward selection for length purposes of this report.*
 
-Forward selection also chooses the model with the same fifteen variables when compared with the models found we found above.
+``` r
+# Forward selection
+MSE = (summary(Full)$sigma)^2
+none = lm(Price ~ 1, data = Ames)
+step(none, scope = list(upper = Full), scale = MSE, direction = "forward")
+```
 
-Stepwise Regression
--------------------
+Forward selection also chooses the model with the same fifteen variables that we have in the previously built models.
 
-Forward selection also has its disadvantages since a predictor selected earlier might become insignificant later on and only serve to crowd the model. Therefore, we decided to use stepwise regression to cover for the disadvantages of both backward elimination and forward selection.
+Step-wise Regression
+--------------------
 
-Although a bit tedious, stepwise regression also yielded the same fifteen predictor model we found earlier. Since all four methods yielded the same fifteen-predictor model, we decide to settle with this as our basic model and move on to its analysis.
+Forward selection also has its disadvantages since a predictor selected earlier might become insignificant later on and only serve to crowd the model. Therefore, we decide to use step-wise regression to cover for the disadvantages seen in backward elimination and forward selection. *Again, we don't show the output of step-wise selection for length purposes of this report.*
+
+``` r
+# Step-wise Regression
+MSE = (summary(Full)$sigma)^2
+none = lm(Price ~ 1, data = Ames)
+step(none, scope = list(upper = Full), scale = MSE)
+```
+
+Although a bit tedious, step-wise regression also yields the same fifteen predictor model we found earlier. Since all four methods fitted the same fifteen-predictor model, we decide to settle with it as our initial model and move on to evaluating it.
 
 Scatterplots
 ------------
 
-We plot our final model to see any trends.
+We first plot the individual scatterplots between the fifteen predictors and `price`.
 
 ``` r
 # Scatterplots of each predictor with price
@@ -507,15 +315,14 @@ plot(Price ~ LotFrontage + LotArea + Quality + Condition + YearBuilt +
 
 ![](report_code_files/figure-markdown_github/unnamed-chunk-7-1.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-2.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-3.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-4.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-5.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-6.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-7.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-8.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-9.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-10.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-11.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-12.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-13.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-14.png)![](report_code_files/figure-markdown_github/unnamed-chunk-7-15.png)
 
-We won't analyze the scatterplots one by one, but later on we will transform our model using these individual scatterplots.
+When it comes to parts of a house, I feel that the more you have, whether it is the number of rooms or square footage of the ground floor, the more desirable it becomes for the owner. The scatterplots all follow this assumption in that as the individual predictors increase in amount, so does `price`. For example, let us take a look at `GroundSF`. As `GroundSF` increases, `price` also increases since the amount of square feet of a house is probably a factor many people value in their house. We won't analyze the plots one by one here, but later on we will transform our model using these individual scatterplots.
 
 Predictor Analysis
 ------------------
 
-Next we investigate to see if any of the predictors are not significant at the 5% level through t-tests for correlation.
+Next we investigate to see if any of the predictors in our model are not significant at the 5% level through individual t-tests.
 
 ``` r
-# Summary method to view predictor significance
 summary(modAmes)
 ```
 
@@ -555,15 +362,14 @@ summary(modAmes)
     ## Multiple R-squared:  0.8556, Adjusted R-squared:  0.8519 
     ## F-statistic: 230.8 on 15 and 584 DF,  p-value: < 2.2e-16
 
-The FullBath predictor is the only predictor in the model that is not significant at a 5% level. Alone, the variable is not a good predictor of price; however, in combination with the other variables, it has meaningful correlation to the response variable.
+The `FullBath` predictor is the only predictor in the model that is not significant. Even though the slope of `FullBath` is not significant in this model, it has meaningful correlation with the other variables such that without it, the model would suffer in its capability to predict `price`.
 
-Multi-collinearity
-------------------
+Multicollinearity
+-----------------
 
-We look at VIF values to see if any predictors have some correlation with each other.
+We look at variance inflation factors (VIF) to detect multicollinearity between predictors. Multicollinearity is when predictors have a correlation with each other that may have a negative effect on your model.
 
 ``` r
-# VIF values
 vif(modAmes)
 ```
 
@@ -574,35 +380,31 @@ vif(modAmes)
     ##       Bedroom    TotalRooms    Fireplaces      GarageSF ScreenPorchSF 
     ##      2.469638      3.963197      1.479378      1.858415      1.046934
 
-All variable VIF values are less than 5 with the exception of GroundSF which has a VIF value of 5.031492. This value is greater than 5 which indicates that the variable shows multicollinearity in relation to the other predictors in the model.
+In general, VIF values close to 1 indicate that the predictors don't have much correlation, VIF of 1-5 indicates moderate correlation, and VIF &gt;5 indicates high correlation. All VIF values are less than 5 with the exception of `GroundSF`, which has a VIF of 5.031492. Thus, `GroundSF` exhibits multicollinearity with respect to the other predictors in the model and is a variable we should transform or consider removing.
 
-Part 2. Residual analysis for our basic model
-=============================================
+Residual Analysis for Initial Model
+===================================
 
-We do some residual analysis to check for basic conditions of our basic model.
+We do some residual analysis to check for some basic assumptions of our linear regression model. These basic conditions include linearity, constant variance, and normality.
 
-Residuals vs fits plot
+Residuals vs Fits Plot
 ----------------------
 
+We start off with a Residuals vs Fits Plot to assess the linearity and variance of our model.
+
 ``` r
-# Residuals vs fits plot
 plot(modAmes$residuals~modAmes$fitted.values, data = Ames)
 abline(0,0)
 ```
 
 ![](report_code_files/figure-markdown_github/unnamed-chunk-10-1.png)
 
-Regarding the conditions for a simple linear model, In terms of error, the residuals are relatively centered around zero; however, they show a distinct curvature meaning that there is lack of independence in the data points that could benefit from some transformation. The residuals do not show a great amount of variance aside from the few outliers.
+The residuals are centered around zero overall, which is what we want to see in a residuals vs fits plot. However, there is a distinct curvature to our plot indicating that linearity does not hold too well. The curved pattern is also responsible for the non-constant variance since the variance increases at the left and right sides of this plot.
 
-Normal quantile plot and histogram
+Normal Quantile Plot and Histogram
 ----------------------------------
 
-``` r
-# Histogram
-hist(modAmes$residuals)
-```
-
-![](report_code_files/figure-markdown_github/unnamed-chunk-11-1.png)
+We look at a normal quantile plot and a residual histogram to evaluate the normality of our model.
 
 ``` r
 # Normal quantile plot
@@ -610,21 +412,31 @@ qqnorm(modAmes$residuals)
 qqline(modAmes$residuals)
 ```
 
-![](report_code_files/figure-markdown_github/unnamed-chunk-11-2.png)
-
-The histogram of the residuals show that the normality of the model is pretty good although there is a slight right skew. The normality is explored further in the normal qunatile plot that shows most of the points throughout the data sticks well to the line overall. However, there are a few data points that are off the line at the left of the model, and a sizeable amount that is skewed at the upper right portion of the model, indicating decent concern for the normality of the model.
-
-Standarized and studentized residuals
--------------------------------------
+![](report_code_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
 ``` r
-# Creating dataframe
+hist(modAmes$residuals)
+```
+
+![](report_code_files/figure-markdown_github/unnamed-chunk-11-2.png)
+
+If the residuals are normally distributed, our data will form a diagonal line in the normal quantile plot. In we look at the plot, most of the data sticks well to the line. However, there are a few points that are off the line at the left of the model, and a noticeable amount that is skewed at the upper right portion of the model, making us slightly concerned about the normality of the model.
+
+The histogram of the residuals again show that most of the residuals is centered around zero, backing up our residual vs fits plot analysis. Furthermore, the histogram shows that the residuals are normally distributed with a slight right skew, wich correlates with what we saw in our normal quantile plot.
+
+Standarized Residuals
+---------------------
+
+Our last step in residual analysis is looking at standarized residuals to detect any outliers in our dataset.
+
+``` r
+# Creating dataframe of standarized residuals
 standard = data.frame(abs(rstandard(modAmes)))
 
-# Standard residuals
-standard2 <- standard %>%
-  arrange(desc(abs.rstandard.modAmes..))
-head(standard2,10)
+# Picking the ten greatest residuals
+standard %>%
+  arrange(desc(abs.rstandard.modAmes..)) %>% 
+  head(10)
 ```
 
     ##    abs.rstandard.modAmes..
@@ -639,51 +451,29 @@ head(standard2,10)
     ## 9                 3.006536
     ## 10                2.733407
 
-``` r
-# Studentized residuals
-student = data.frame(abs(rstudent(modAmes)))
-student2 <- student %>%
-  arrange(desc(abs.rstudent.modAmes..))
+Standardized residual values that are greater than 3 are considered extreme and potential outliers. Therefore, we look for any observations in our dataset that have an absolute residual value greater than 3. We see 9 values that are greater than 3 that can be considered as outliers in our data. One way to improve our model is to remove these outliers; we leave them in for now since these 9 points are less than 2% of our training dataset, and we also plan on transforming our model which may eliminate some of these outliers.
 
-head(student2,10)
-```
+Building a Better Model
+=======================
 
-    ##    abs.rstudent.modAmes..
-    ## 1                7.585620
-    ## 2                5.518850
-    ## 3                4.624242
-    ## 4                4.496042
-    ## 5                4.313669
-    ## 6                4.086760
-    ## 7                3.557859
-    ## 8                3.100131
-    ## 9                3.027482
-    ## 10               2.748705
+Transforming our Initial Model
+------------------------------
 
-Studentized and standardized residual values that are greater than 3 are considered to be outliers, therefore, we test for any values in the model that have absolute residual values that are greater than 3. By creating a dataframe and arranging the studentized and standardized absolute residual values from highest to lowest, we see 9 values that are greater than 3 that can be considered as outliers that are influential to the data.
-
-Part 3. Find a a fancier model
-==============================
-
-Transformation
---------------
-
-We now want to fix some of the issues with our basic model by building a fancier model through transforming our variables.
+Even though our initial model has decent normality and variance, it is somewhat lacking in linearity. We now want to fix some of these aspects of our initial model by transforming some of the predictors.
 
 ``` r
 # Transformed model
-modAmes2 = lm(log(Price) ~ log(LotFrontage + LotArea) + I(Quality^2 + Condition) + I(YearBuilt + .5*YearRemodel) + (BasementSF) + (GroundSF) + I(.5*BasementFBath + .5*FullBath) + I(Bedroom + TotalRooms) + Fireplaces + I(GarageSF + ScreenPorchSF), data = Ames)
+modAmes2 = lm(log(Price) ~ log(LotFrontage + LotArea) + I(Quality^2 + Condition) + I(YearBuilt + .5 * YearRemodel) + (BasementSF) + (GroundSF) + I(.5 * BasementFBath + .5 * FullBath) + I(Bedroom + TotalRooms) + Fireplaces + I(GarageSF + ScreenPorchSF), data = Ames)
 ```
 
-We grouped variables together that we felt had correlation to one another. For example, `Bedroom` and `TotalRooms` are valued equally between prospective buyers where more rooms are better. Our transformed model also has logistic and linear transformations based on the individual scatterplots we plotted from earlier.
+We grouped variables together that we felt had some correlation with one another. For example, `Bedroom` and `TotalRooms` may be valued in a similar fashion between prospective buyers since more rooms are always better. We also made logistic and linear transformations that improved the linearity relationships seen in the individual scatterplots we plotted earlier. Next, we conduct similar model evaluation and residual analysis we did for our initial model.
 
-Predictor analysis
-------------------
+Evaluating Transformed Model
+----------------------------
 
-We look at the t-test for correlation to determine predictor significance for our transformed model.
+We start off our analysis of our transformed model by looking at the adjusted R-squared value as well as the residual standard error. Once again, we also want to see which of our predictors are significant through individual t-tests.
 
 ``` r
-# Summary of fancier model
 summary(modAmes2)
 ```
 
@@ -728,33 +518,22 @@ summary(modAmes2)
     ## Multiple R-squared:  0.8583, Adjusted R-squared:  0.8562 
     ## F-statistic: 397.2 on 9 and 590 DF,  p-value: < 2.2e-16
 
-After various transformations, we notice that all of the predictors are within the 5% significance interval. We do a more in-depth analysis of our fancier model in the next part.
+Our new model has a higher adjusted R-squared value of 0.8562 (old model: 0.8519). However, our residual standard error is 0.1568, which is way too close to 0, making us think that our model may be overfitting the training set. We will find out whether this is the case when we look at the testing set. After various transformations, we are happy to see that all of the predictors are within the 5% significance interval.
 
-Part 4. Residual analysis for your fancier model
-================================================
-
-Residual vs fits plot
+Residual vs Fits Plot
 ---------------------
 
 ``` r
-# Residual vs fits plot
 plot(modAmes2$residuals~modAmes$fitted.values, data = Ames)
 abline(0,0)
 ```
 
 ![](report_code_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
-We see that the residual vs fitted values plot for our fancier model has a much more even distribution above and below the line throughout the graph. The distinct curved pattern we saw in our basic model has been replaced by a more random distribution throughout the plot, indicating that our transformed model is a much better fit for predicting prices from our data.
+We see that the residual vs fits plot has a much more even distribution above and below the line throughout the graph. The distinct curved pattern we saw in our initial model has been replaced by a more random distribution throughout the plot, indicating that our transformed model is a much better fit for predicting prices from our data and that linearity holds. Furthermore, variance seems constant throughout.
 
-Normal quantile plot and histogram
+Normal Quantile Plot and Histogram
 ----------------------------------
-
-``` r
-# Histogram
-hist(modAmes2$residuals)
-```
-
-![](report_code_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
 ``` r
 # Normal quantile plot
@@ -762,19 +541,27 @@ qqnorm(modAmes2$residuals)
 qqline(modAmes2$residuals)
 ```
 
-![](report_code_files/figure-markdown_github/unnamed-chunk-16-2.png)
-
-Although the histogram isn't centered properly, we see that the normality of the model is pretty good since the data itself is centered properly. The normality is explored further in the normal qunatile plot that shows most of the points throughout the data sticks well to the line overall. The left and right tails that are slightly skewed shows less of a skew when compared to before, indicating that our transformed model also preserves normality better than our basic model.
-
-Standarized and studentized Residual
-------------------------------------
+![](report_code_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
 ``` r
-# Standardized residual
-standard3 = data.frame(abs(rstandard(modAmes2)))
-standard4 <- standard3 %>%
-  arrange(desc(abs.rstandard.modAmes2..))
-head(standard4,10)
+hist(modAmes2$residuals)
+```
+
+![](report_code_files/figure-markdown_github/unnamed-chunk-16-2.png)
+
+The normal quantile plot shows that most of the points throughout the data sticks better to the line as compared to before. The left and right tails show less of a skew as compared to before, and this is matched in our histogram, which shows a normal distribution. Altogether, this is indicative that our transformed model preserves normality better than our initial model. This analysis is not surprising considering that our standard residual error was so close to zero.
+
+Standarized Residuals
+---------------------
+
+``` r
+# Creating dataframe of standarized residuals
+standard = data.frame(abs(rstandard(modAmes2)))
+
+# Picking the ten greatest residuals
+standard %>%
+  arrange(desc(abs.rstandard.modAmes2..)) %>% 
+  head(10)
 ```
 
     ##    abs.rstandard.modAmes2..
@@ -789,37 +576,36 @@ head(standard4,10)
     ## 9                  2.646116
     ## 10                 2.624817
 
-``` r
-# Studentized residual
-student3 = data.frame(abs(rstudent(modAmes2)))
-student4 <- student3 %>%
-  arrange(desc(abs.rstudent.modAmes2..))
+This time we see only 3 values that are strictly greater than 3 that can be considered as outliers in our data. This is a great improvement when compared to the 9 outliers that we discovered previously.
 
-head(student4,10)
+Cross-validation
+----------------
+
+We now take our final model we developed from the training set and cross-validate it with our testing set. It is important to know whether our model is a good fit for our data or if there is over/underfitting present.
+
+``` r
+# Calculating shrinkage
+fitPrice = predict(modAmes2, newdata = AmesTest)
+crosscorr = cor(AmesTest$Price, fitPrice)
+testingRsq = crosscorr^2
+trainingRsq = .8583
+trainingRsq - trainingRsq
 ```
 
-    ##    abs.rstudent.modAmes2..
-    ## 1                14.772283
-    ## 2                 3.559255
-    ## 3                 3.452871
-    ## 4                 2.981097
-    ## 5                 2.958391
-    ## 6                 2.823950
-    ## 7                 2.715805
-    ## 8                 2.664643
-    ## 9                 2.659702
-    ## 10                2.638040
+    ## [1] 0
 
-To revisit, studentized and standardized residual values that are greater than 3 are considered to be outliers, therefore, we test for any values in the model that have absolute residual values that are greater than 3. By creating a dataframe and arranging the studentized and standardized absolute residual values from highest to lowest, this time we see only 3 values that are strictly greater than 3 that can be considered as outliers that are influential to the data. This is a great improvement as compared to our 9 outliers that we discovered in our basic model.
+We cross-validate our model by comparing the R-squared values of our model between the training and test set. We calculate the difference between the two R-squared values, otherwise known as shrinkage. For a model to be a good fit, the shrinkage must be close to 0. The shrinkage is -0.02312466, meaning that our testing data fits our model approximately 2% better than our training data. It happened just by chance that our testing set is a stronger fit for our model.
 
-Part 5. Final model
-===================
+Predicting a House Price
+------------------------
 
 We now use our final model to predict the price of a house with the following characteristics.
 
 ``` r
+# House price we are trying to predict
 newx=data.frame(TotalRooms = 9, YearBuilt = 1995, YearRemodel = 2003, LotArea = 11060, LotFrontage = 90, Quality = 7, Condition = 5,BasementSF = 1150, BasementFBath = 0, GroundSF = 2314, Bedroom = 3, FullBath = 2, Fireplaces = 1, GarageSF = 502, ScreenPorchSF = 0)
 
+# Prediction interval
 predict.lm(modAmes2, newx, interval="prediction", level = .95)
 ```
 
@@ -827,148 +613,15 @@ predict.lm(modAmes2, newx, interval="prediction", level = .95)
     ## 1 5.530761 5.221046 5.840476
 
 ``` r
-# Our model transformed price by taking the natural log so we have to recalculate the prediction interval
+# Our model logistically transforms price so we have to recalculate the prediction interval accordingly
 exp(c(5.530761, 5.221046, 5.840476))
 ```
 
     ## [1] 252.3359 185.1277 343.9430
 
-The 95% prediction interval for this house is (185.1277, 343.9430). When buying a house that fits the relevant characteristics of this house, we are 95% confident that the price of the house will be between 185.1277 thousand dollars and 343.9430 thousand dollars. This doesn't seem unreasonable by just looking at the overall properties of this house.
+When buying a house that fits the relevant characteristics listed above, we are 95% confident that the price of the house will be between 185.1277 thousand dollars and 343.9430 thousand dollars. This doesn't seem unreasonable by just looking at the overall properties of this house.
 
-Part 6. Cross-validation
-========================
+Conclusion
+==========
 
-Residual analysis of AmesTest dataset
--------------------------------------
-
-We now take our final model we developed from the training set and cross-validate it with our testing set. It is important to know whether our model is a good fit or if there is over/underfitting present. We start off with calculating the residuals of the test set.
-
-``` r
-# Compute predicted Price for each of the cases in the test sample, using your model resulting from the initial fit and residual analysis in parts 1 and 2
-fitPrice = predict(modAmes, newdata = AmesTest)
-
-# Compute the residuals for the test cases
-modAmesTest = lm(formula = Price ~ LotFrontage + LotArea + Quality + Condition + YearBuilt + YearRemodel + BasementSF + GroundSF + BasementFBath + FullBath + Bedroom + TotalRooms + Fireplaces + GarageSF + ScreenPorchSF, data = AmesTest)
-
-holdoutresid = AmesTest$Price - fitPrice
-standard = rstandard(modAmesTest)
-student = rstudent(modAmesTest)
-
-# Compute the mean and standard deviation of these residuals
-mean(holdoutresid)
-```
-
-    ## [1] 0.874202
-
-``` r
-sd(holdoutresid)
-```
-
-    ## [1] 27.58993
-
-``` r
-hist(holdoutresid)
-```
-
-![](report_code_files/figure-markdown_github/unnamed-chunk-20-1.png)
-
-Based on our training model, the mean of the residuals is expected to be approximately 0. The training data residual mean is -2.892388 x 10^-16 while the test sample has a residual mean of 0.874202. For 200 new data points, this is very close to what we expect the mean to be. Likewise, the training data residual standard deviation is 29.8789 while the testing data has a residual standard deviation of 27.58993. The standard deviations are very close as well between the two data sets. The histogram of the test sample residuals shows a bell-shape centered at 0, and one standard deviation is indeed approximately 25 which supports our numbers. Thus, both the mean and standard deviation of these residuals are close to what we expect using the training model.
-
-Outliers
---------
-
-Are there any cases in the test dataset that are especially poorly predicted by the training model? If so, we identify by the row number(s) in the test data and look at the scatterplot for comparison.
-
-``` r
-# Plot of test dataset
-plot(rstandard(modAmesTest)~modAmesTest$fitted.values)
-```
-
-![](report_code_files/figure-markdown_github/unnamed-chunk-21-1.png)
-
-``` r
-# Identifying outliers by row number
-m <- abs(standard)>3
-(1:200)[m]
-```
-
-    ## [1] 102 140 179
-
-There are three standardized residuals that have an absolute value greater than 3 at rows 102, 140, 179. In the residuals vs fitted values plot, you can see these three residuals on the plot as well (Two at the top right, one on the bottom). Now we will check with the studentized residuals to see if these test cases are outliers.
-
-Standarized and studentized residuals
--------------------------------------
-
-``` r
-# Comparing standarized with studentized residuals
-standard[102]
-```
-
-    ##      102 
-    ## 5.384016
-
-``` r
-student[102]
-```
-
-    ##      102 
-    ## 5.849903
-
-``` r
-standard[140]
-```
-
-    ##      140 
-    ## 3.367224
-
-``` r
-student[140]
-```
-
-    ##      140 
-    ## 3.466565
-
-``` r
-standard[179]
-```
-
-    ##       179 
-    ## -4.300732
-
-``` r
-student[179]
-```
-
-    ##       179 
-    ## -4.522349
-
-``` r
-# Cook's Distance plot
-cooksplot(modAmesTest)
-```
-
-![](report_code_files/figure-markdown_github/unnamed-chunk-22-1.png)
-
-For all three cases, the standardized and studentized residuals are very close in value. This indicates that the fit of the model does not change much without the inclusion of these cases meaning they are not outliers. This is reinforced in our Cook's Distance plot where we see that cases 102, 140, and 179 all lie within the outer red lines. Thus none of the test dataset is significantly poorly predicted by our model.
-
-Cross-validation calculation
-----------------------------
-
-``` r
-# Compute the correlation between the predicted values above and actual prices for the test dataset
-cor(AmesTest$Price, fitPrice)
-```
-
-    ## [1] 0.9374031
-
-``` r
-trainingRsq = .8556
-crosscorr = cor(AmesTest$Price, fitPrice)
-holdoutRsq = crosscorr^2
-
-trainingRsq - holdoutRsq
-```
-
-    ## [1] -0.02312466
-
-We find the cross-validation correlation between the training and test set. For a model to be a good fit, the shrinkage must be 0 or very close to it. When calculating the shrinkage, we found the shrinkage to be -0.02312466. This means that our testing data fits our model approximately 2% better than our training data. It happened by chance that testing data is a stronger fit for our model.
+Our initial goal of predicting the price of a house by using a linear regression model is complete. Since our final model fulfills all the assumptions of linear regression, we can say that our model predicts housing prices pretty well. We should note that this dataset is from houses in Ames, Iowa and may not be indicative of housing prices elsewhere. We should also keep in mind that the total dataset is only 800 observations, which is not a lot. Furthermore, our cross-validation methodology involves dividing our dataset into training and testing sets before import, so it could be due to chance that our model fits the testing set so well. If we want to improve our model, we would want to conduct a k-fold cross-validation to reduce the chances of this possibility.
